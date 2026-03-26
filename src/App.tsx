@@ -54,7 +54,7 @@ const Layout = ({ children, user }: { children: React.ReactNode, user: FirebaseU
             <div className="flex items-center gap-3">
               <div className="bg-white p-0.5 rounded-full overflow-hidden w-12 h-12 flex items-center justify-center shadow-inner border border-white/20">
                 <img 
-                  src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Seal_of_Dasmari%C3%B1as.png/240px-Seal_of_Dasmari%C3%B1as.png" 
+                  src="/src/img/Gemini_Generated_Image_4z1hol4z1hol4z1h.png" 
                   alt="City of Dasmariñas Seal" 
                   className="w-10 h-10 object-contain rounded-full"
                   referrerPolicy="no-referrer"
