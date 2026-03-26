@@ -64,7 +64,7 @@ const Layout = ({ children, user }: { children: React.ReactNode, user: FirebaseU
                 />
               </div>
               <div>
-                <h1 className="text-lg font-bold leading-tight">Smart City Monitoring and Alert System for Dasmariñas City</h1>
+                <h1 className="text-lg font-bold leading-tight">Smart City Monitoring and Alert System</h1>
                 <p className="text-[10px] uppercase tracking-wider opacity-80">City of Dasmariñas</p>
               </div>
             </div>
