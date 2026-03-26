@@ -1,0 +1,195 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: nodes
+    // Document ID: nodeId (e.g., DASMA-01)
+    // Fields:
+    //   - id: string (required, < 50 chars)
+    //   - barangay: string (required, < 100 chars)
+    //   - lat: number (required)
+    //   - lng: number (required)
+    //   - status: string (required, ['online', 'offline', 'maintenance'])
+    //   - lastUpdate: string (required, ISO 8601)
+    //   - battery: number (required, 0-100)
+    //   - thresholds: map (optional)
+    //
+    // Collection: readings
+    // Document ID: auto-generated
+    // Fields:
+    //   - nodeId: string (required, < 50 chars)
+    //   - temp: number (required)
+    //   - humidity: number (required)
+    //   - aqi: number (required)
+    //   - pressure: number (optional)
+    //   - battery: number (optional)
+    //   - timestamp: string (required, ISO 8601)
+    //
+    // Collection: alerts
+    // Document ID: auto-generated
+    // Fields:
+    //   - nodeId: string (required, < 50 chars)
+    //   - barangay: string (required, < 100 chars)
+    //   - type: string (required, ['heat', 'fire', 'air_quality', 'weather'])
+    //   - severity: string (required, ['info', 'warning', 'critical'])
+    //   - message: string (required, < 500 chars)
+    //   - timestamp: string (required, ISO 8601)
+    //   - resolved: bool (required)
+    //
+    // Collection: first-aid
+    // Document ID: auto-generated
+    // Fields:
+    //   - condition: string (required, < 100 chars)
+    //   - category: string (required, ['burns', 'wounds', 'poisoning', 'heat', 'bites', 'other'])
+    //   - overview: string (required, < 1000 chars)
+    //   - emergencySigns: list (required, strings)
+    //   - itemsNeeded: list (required, strings)
+    //   - steps: list (required, strings)
+    //   - otcGuidance: string (optional, < 500 chars)
+    //   - notToDo: list (required, strings)
+    //   - aftercare: string (required, < 1000 chars)
+    //   - visualGuide: string (optional, < 500 chars)
+    //   - imageQueries: list (required, strings)
+    //   - videoQuery: string (required, < 200 chars)
+//
+// Collection: news
+// Document ID: auto-generated
+// Fields:
+//   - title: string (required, < 200 chars)
+//   - summary: string (required, < 1000 chars)
+//   - date: string (required, < 50 chars)
+//   - category: string (required, < 50 chars)
+//   - timestamp: string (required, ISO 8601)
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          (request.auth.token.email == "gerry.guevarra10@gmail.com" && request.auth.token.email_verified == true)
+        );
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string &&
+        dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // Domain Validators
+    function isValidNode(data) {
+      return hasRequiredFields(['id', 'barangay', 'lat', 'lng', 'status', 'lastUpdate', 'battery']) &&
+             hasOnlyAllowedFields(['id', 'barangay', 'lat', 'lng', 'status', 'lastUpdate', 'battery', 'thresholds']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 50 &&
+             data.barangay is string && data.barangay.size() > 0 && data.barangay.size() < 100 &&
+             data.lat is number && data.lng is number &&
+             data.status in ['online', 'offline', 'maintenance'] &&
+             isValidDateString(data.lastUpdate) &&
+             data.battery is number && data.battery >= 0 && data.battery <= 100;
+    }
+
+    function isValidReading(data) {
+      return hasRequiredFields(['nodeId', 'temp', 'humidity', 'aqi', 'timestamp']) &&
+             hasOnlyAllowedFields(['nodeId', 'temp', 'humidity', 'aqi', 'timestamp', 'pressure', 'battery']) &&
+             data.nodeId is string && data.nodeId.size() > 0 && data.nodeId.size() < 50 &&
+             data.temp is number && data.humidity is number &&
+             data.aqi is number && isValidDateString(data.timestamp) &&
+             (!('pressure' in data) || data.pressure is number) &&
+             (!('battery' in data) || (data.battery is number && data.battery >= 0 && data.battery <= 100));
+    }
+
+    function isValidAlert(data) {
+      return hasRequiredFields(['nodeId', 'barangay', 'type', 'severity', 'message', 'timestamp', 'resolved']) &&
+             hasOnlyAllowedFields(['nodeId', 'barangay', 'type', 'severity', 'message', 'timestamp', 'resolved']) &&
+             data.nodeId is string && data.nodeId.size() > 0 && data.nodeId.size() < 50 &&
+             data.barangay is string && data.barangay.size() > 0 && data.barangay.size() < 100 &&
+             data.type in ['heat', 'fire', 'air_quality', 'weather', 'thunderstorm'] &&
+             data.severity in ['info', 'warning', 'critical'] &&
+             data.message is string && data.message.size() > 0 && data.message.size() < 500 &&
+             isValidDateString(data.timestamp) &&
+             data.resolved is bool;
+    }
+
+    function isValidFirstAidGuide(data) {
+      return hasRequiredFields(['condition', 'category', 'overview', 'emergencySigns', 'itemsNeeded', 'steps', 'notToDo', 'aftercare', 'imageQueries', 'videoQuery']) &&
+             hasOnlyAllowedFields(['condition', 'category', 'overview', 'emergencySigns', 'itemsNeeded', 'steps', 'notToDo', 'aftercare', 'imageQueries', 'videoQuery', 'otcGuidance', 'visualGuide']) &&
+             data.condition is string && data.condition.size() > 0 && data.condition.size() < 100 &&
+             data.category in ['burns', 'wounds', 'poisoning', 'heat', 'bites', 'other'] &&
+             data.overview is string && data.overview.size() > 0 && data.overview.size() < 1000 &&
+             data.emergencySigns is list && data.itemsNeeded is list && data.steps is list &&
+             data.notToDo is list && data.imageQueries is list &&
+             data.aftercare is string && data.aftercare.size() > 0 && data.aftercare.size() < 1000 &&
+             data.videoQuery is string && data.videoQuery.size() > 0 && data.videoQuery.size() < 200 &&
+             (!('otcGuidance' in data) || (data.otcGuidance is string && data.otcGuidance.size() < 500)) &&
+             (!('visualGuide' in data) || (data.visualGuide is string && data.visualGuide.size() < 500));
+    }
+
+    function isValidNews(data) {
+      return hasRequiredFields(['title', 'summary', 'date', 'category', 'timestamp']) &&
+             hasOnlyAllowedFields(['title', 'summary', 'date', 'category', 'timestamp']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.summary is string && data.summary.size() > 0 && data.summary.size() < 1000 &&
+             data.date is string && data.date.size() > 0 && data.date.size() < 50 &&
+             data.category is string && data.category.size() > 0 && data.category.size() < 50 &&
+             isValidDateString(data.timestamp);
+    }
+
+    // Test connection
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // Nodes: Public can read, Admins can write
+    match /nodes/{nodeId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidNode(request.resource.data);
+    }
+
+    // Readings: Public can read, Authenticated devices (ESP32) can create
+    match /readings/{readingId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidReading(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    // Alerts: Public can read, Authenticated devices (ESP32) can create
+    match /alerts/{alertId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidAlert(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    // First Aid: Public can read, Authenticated users can create (AI generation)
+    match /first-aid/{guideId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidFirstAidGuide(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    match /news/{newsId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Users: Private data
+    match /users/{userId} {
+      allow read, write: if request.auth.uid == userId || isAdmin();
+    }
+  }
+}

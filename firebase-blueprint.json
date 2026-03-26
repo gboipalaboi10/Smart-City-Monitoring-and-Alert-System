@@ -1,0 +1,112 @@
+{
+  "entities": {
+    "Node": {
+      "title": "Sensor Node",
+      "description": "An ESP32 LoRa sensor node deployed in a barangay.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the node (e.g., DASMA-01)" },
+        "barangay": { "type": "string", "description": "Name of the barangay where the node is located" },
+        "lat": { "type": "number", "description": "Latitude coordinate" },
+        "lng": { "type": "number", "description": "Longitude coordinate" },
+        "status": { "type": "string", "enum": ["online", "offline", "maintenance"], "description": "Current connectivity status" },
+        "lastUpdate": { "type": "string", "format": "date-time", "description": "Timestamp of the last received reading" },
+        "battery": { "type": "number", "description": "Last reported battery voltage" },
+        "thresholds": {
+          "type": "object",
+          "properties": {
+            "tempMax": { "type": "number" },
+            "humMin": { "type": "number" },
+            "aqiMax": { "type": "number" }
+          }
+        }
+      },
+      "required": ["id", "barangay", "lat", "lng"]
+    },
+    "Reading": {
+      "title": "Sensor Reading",
+      "description": "Environmental data point from a sensor node.",
+      "type": "object",
+      "properties": {
+        "nodeId": { "type": "string" },
+        "temp": { "type": "number" },
+        "humidity": { "type": "number" },
+        "aqi": { "type": "number" },
+        "pressure": { "type": "number", "description": "Barometric pressure in hPa" },
+        "battery": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nodeId", "temp", "humidity", "aqi", "pressure", "timestamp"]
+    },
+    "Alert": {
+      "title": "System Alert",
+      "description": "An alert triggered by exceeding environmental thresholds.",
+      "type": "object",
+      "properties": {
+        "nodeId": { "type": "string" },
+        "barangay": { "type": "string" },
+        "type": { "type": "string", "enum": ["heat", "fire", "air_quality", "weather", "thunderstorm"] },
+        "severity": { "type": "string", "enum": ["info", "warning", "critical"] },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "resolved": { "type": "boolean" }
+      },
+      "required": ["nodeId", "type", "severity", "timestamp"]
+    },
+    "FirstAidGuide": {
+      "title": "First Aid Guide",
+      "description": "A comprehensive guide for first aid conditions.",
+      "type": "object",
+      "properties": {
+        "condition": { "type": "string" },
+        "category": { "type": "string", "enum": ["burns", "wounds", "poisoning", "heat", "bites", "other"] },
+        "overview": { "type": "string" },
+        "emergencySigns": { "type": "array", "items": { "type": "string" } },
+        "itemsNeeded": { "type": "array", "items": { "type": "string" } },
+        "steps": { "type": "array", "items": { "type": "string" } },
+        "otcGuidance": { "type": "string" },
+        "notToDo": { "type": "array", "items": { "type": "string" } },
+        "aftercare": { "type": "string" },
+        "visualGuide": { "type": "string" },
+        "imageQueries": { "type": "array", "items": { "type": "string" } },
+        "videoQuery": { "type": "string" }
+      },
+      "required": ["condition", "category", "overview", "steps"]
+    },
+    "News": {
+      "title": "Local News",
+      "description": "Local weather and safety news for the city.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "date": { "type": "string" },
+        "category": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "summary", "date", "category", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/nodes/{nodeId}": {
+      "schema": "Node",
+      "description": "Collection of sensor nodes."
+    },
+    "/readings/{readingId}": {
+      "schema": "Reading",
+      "description": "Time-series collection of sensor readings."
+    },
+    "/alerts/{alertId}": {
+      "schema": "Alert",
+      "description": "Collection of system alerts."
+    },
+    "/first-aid/{guideId}": {
+      "schema": "FirstAidGuide",
+      "description": "Collection of first aid guides."
+    },
+    "/news/{newsId}": {
+      "schema": "News",
+      "description": "Collection of local news."
+    }
+  }
+}

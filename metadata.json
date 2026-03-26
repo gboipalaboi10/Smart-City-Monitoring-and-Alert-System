@@ -1,0 +1,5 @@
+{
+  "name": "Dasmariñas City DRRM Monitoring System",
+  "description": "Real-time environmental monitoring and disaster risk reduction system for the City of Dasmariñas, Cavite, using IoT sensor networks.",
+  "requestFramePermissions": ["geolocation"]
+}
